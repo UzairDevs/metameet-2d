@@ -1,4 +1,3 @@
-
 import { io } from 'socket.io-client';
 
 // Socket instance
@@ -6,15 +5,13 @@ export let socket = null;
 
 export const initSocketConnection = () => {
   if (socket) return socket;
-  
-  
+    
   socket = io('http://localhost:3000', {
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
     autoConnect: true
   });
-
-
+  
   socket.on('connect', () => {
     console.log('Connected to socket server with ID:', socket.id);
   });

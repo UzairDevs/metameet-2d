@@ -101,34 +101,33 @@ io.on('connection', (socket) => {
   // WebRTC signaling
   socket.on('webrtc-offer', (data) => {
     const { to, offer } = data;
-    console.log(`Received offer from ${socket.userData?.userId} to ${to}`);
+    console.log(`Received WebRTC offer from ${socket.userData?.userId} to ${to}`);
     
-    // Find the target socket by user ID
     const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
       console.log(`Forwarding offer to ${to}`);
-      io.to(targetSocket.id).emit('webrtc-offer', {
+      targetSocket.emit('webrtc-offer', {
         from: socket.userData.userId,
         offer: offer
       });
     } else {
-      console.log(`User ${to} not found for offer`);
+      console.log(`Target user ${to} not found for WebRTC offer`);
     }
   });
 
   socket.on('webrtc-answer', (data) => {
     const { to, answer } = data;
-    console.log(`Received answer from ${socket.userData?.userId} to ${to}`);
+    console.log(`Received WebRTC answer from ${socket.userData?.userId} to ${to}`);
     
     const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
       console.log(`Forwarding answer to ${to}`);
-      io.to(targetSocket.id).emit('webrtc-answer', {
+      targetSocket.emit('webrtc-answer', {
         from: socket.userData.userId,
         answer: answer
       });
     } else {
-      console.log(`User ${to} not found for answer`);
+      console.log(`Target user ${to} not found for WebRTC answer`);
     }
   });
 
@@ -139,12 +138,12 @@ io.on('connection', (socket) => {
     const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
       console.log(`Forwarding ICE candidate to ${to}`);
-      io.to(targetSocket.id).emit('webrtc-ice-candidate', {
+      targetSocket.emit('webrtc-ice-candidate', {
         from: socket.userData.userId,
         candidate: candidate
       });
     } else {
-      console.log(`User ${to} not found for ICE candidate`);
+      console.log(`Target user ${to} not found for ICE candidate`);
     }
   });
 
@@ -158,6 +157,7 @@ io.on('connection', (socket) => {
       socket.to(roomId).emit('user-left', { userId });
       
       if (Object.keys(rooms[roomId].participants).length === 0) {
+        console.log(`Room ${roomId} is empty, removing it`);
         delete rooms[roomId];
       }
     }
@@ -177,13 +177,15 @@ function findSocketByUserId(userId) {
 // Room cleanup
 setInterval(() => {
   const now = Date.now();
-  const MAX_ROOM_AGE = 24 * 60 * 60 * 1000;
+  const MAX_ROOM_AGE = 24 * 60 * 60 * 1000; // 24 hours
+  
   for (const roomId in rooms) {
     if (now - rooms[roomId].createdAt > MAX_ROOM_AGE) {
+      console.log(`Room ${roomId} expired, removing it`);
       delete rooms[roomId];
     }
   }
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000); // Check every hour
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

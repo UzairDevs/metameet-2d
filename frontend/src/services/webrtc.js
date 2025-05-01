@@ -1,4 +1,4 @@
-import { socket } from './socket';
+import { socket, initSocketConnection } from './socket';
 
 const PEER_CONFIG = {
   iceServers: [
@@ -35,6 +35,12 @@ export function checkProximity(otherUserId, otherPosition, myPosition) {
 
 export async function initWebRTC(currentUserId) {
   userId = currentUserId;
+  
+  // Ensure socket is initialized
+  if (!socket) {
+    initSocketConnection();
+  }
+  
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ 
       video: true, 
@@ -42,47 +48,7 @@ export async function initWebRTC(currentUserId) {
     });
     
     // Setup socket listeners for WebRTC signaling
-    socket.on('webrtc-offer', async ({ from, offer }) => {
-      console.log(`Received offer from ${from}`);
-      if (!peers.has(from)) {
-        const { pc } = createPeerConnection(from, false);
-        
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        
-        socket.emit('webrtc-answer', {
-          to: from,
-          answer: pc.localDescription
-        });
-      }
-    });
-    
-    socket.on('webrtc-answer', async ({ from, answer }) => {
-      console.log(`Received answer from ${from}`);
-      if (peers.has(from)) {
-        const { pc } = peers.get(from);
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      }
-    });
-    
-    socket.on('webrtc-ice-candidate', async ({ from, candidate }) => {
-      console.log(`Received ICE candidate from ${from}`);
-      if (peers.has(from) && candidate) {
-        const { pc } = peers.get(from);
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
-    
-    socket.on('proximity-alert', (proxUserId) => {
-      console.log(`Proximity alert for user ${proxUserId}`);
-      proximityCallbacks.forEach(callback => {
-        callback({ 
-          userId: proxUserId, 
-          inProximity: true 
-        });
-      });
-    });
+    setupSocketListeners();
     
     return localStream;
   } catch (error) {
@@ -91,22 +57,100 @@ export async function initWebRTC(currentUserId) {
   }
 }
 
+function setupSocketListeners() {
+  // Remove any existing listeners to prevent duplicates
+  socket.off('webrtc-offer');
+  socket.off('webrtc-answer');
+  socket.off('webrtc-ice-candidate');
+  socket.off('proximity-alert');
+  
+  // Setup offer handler
+  socket.on('webrtc-offer', async ({ from, offer }) => {
+    console.log(`Received offer from ${from}`);
+    if (!peers.has(from)) {
+      const { pc } = createPeerConnection(from, false);
+      
+      // Add tracks to the connection
+      localStream.getTracks().forEach(track => {
+        console.log(`Adding ${track.kind} track to peer connection (responding to offer)`);
+        pc.addTrack(track, localStream);
+      });
+      
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        socket.emit('webrtc-answer', {
+          to: from,
+          answer: pc.localDescription
+        });
+      } catch (error) {
+        console.error('Error handling offer:', error);
+      }
+    }
+  });
+  
+  // Setup answer handler
+  socket.on('webrtc-answer', async ({ from, answer }) => {
+    console.log(`Received answer from ${from}`);
+    if (peers.has(from)) {
+      const { pc } = peers.get(from);
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('Set remote description successfully from answer');
+      } catch (error) {
+        console.error('Error setting remote description from answer:', error);
+      }
+    }
+  });
+  
+  // Setup ICE candidate handler
+  socket.on('webrtc-ice-candidate', async ({ from, candidate }) => {
+    console.log(`Received ICE candidate from ${from}`);
+    if (peers.has(from) && candidate) {
+      const { pc } = peers.get(from);
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('Added ICE candidate successfully');
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+      }
+    }
+  });
+  
+  // Setup proximity handler
+  socket.on('proximity-alert', (proxUserId) => {
+    console.log(`Proximity alert for user ${proxUserId}`);
+    proximityCallbacks.forEach(callback => {
+      callback({ 
+        userId: proxUserId, 
+        inProximity: true 
+      });
+    });
+  });
+}
+
 export async function startCall(targetUserId) {
   try {
     console.log(`Starting call with ${targetUserId}`);
     const { pc } = createPeerConnection(targetUserId, true);
     
     // Add tracks before creating offer
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    localStream.getTracks().forEach(track => {
+      console.log(`Adding ${track.kind} track to peer connection (initiating call)`);
+      pc.addTrack(track, localStream);
+    });
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     
-    // Send offer via socket.io instead of websocket
     socket.emit('webrtc-offer', {
       to: targetUserId,
       offer: pc.localDescription
     });
+    
+    console.log('Offer sent to', targetUserId);
   } catch (error) {
     console.error('Call start failed:', error);
     throw error;
@@ -125,13 +169,15 @@ function createPeerConnection(targetUserId, isInitiator) {
   const remoteStream = new MediaStream();
   
   pc.ontrack = (event) => {
-    console.log(`Received track from ${targetUserId}`, event.track.kind);
-    event.streams[0].getTracks().forEach(track => {
-      console.log(`Adding ${track.kind} track to remote stream`);
-      remoteStream.addTrack(track);
-    });
+    console.log(`Received track from ${targetUserId}:`, event.track.kind);
     
-    // Notify about the new stream
+    // Add track to remote stream if not already added
+    if (!remoteStream.getTracks().some(t => t.id === event.track.id)) {
+      remoteStream.addTrack(event.track);
+      console.log(`Added ${event.track.kind} track to remote stream`);
+    }
+    
+    // Notify about the stream
     proximityCallbacks.forEach(cb => cb({
       userId: targetUserId,
       hasStream: true,
@@ -150,42 +196,63 @@ function createPeerConnection(targetUserId, isInitiator) {
   };
 
   pc.onconnectionstatechange = () => {
-    console.log(`Connection state changed: ${pc.connectionState}`);
-    if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+    console.log(`Connection state changed with ${targetUserId}: ${pc.connectionState}`);
+    if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      console.log(`Cleaning up peer connection with ${targetUserId} due to state: ${pc.connectionState}`);
       cleanupPeer(targetUserId);
     }
   };
 
-  // For non-initiator, add tracks right away
-  if (!isInitiator && localStream) {
-    console.log('Adding local tracks to peer connection (non-initiator)');
-    localStream.getTracks().forEach(track => {
-      pc.addTrack(track, localStream);
-    });
-  }
+  pc.oniceconnectionstatechange = () => {
+    console.log(`ICE connection state with ${targetUserId}: ${pc.iceConnectionState}`);
+    if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+      console.log(`Cleaning up peer connection with ${targetUserId} due to ICE state: ${pc.iceConnectionState}`);
+      cleanupPeer(targetUserId);
+    }
+  };
 
   peers.set(targetUserId, { pc, remoteStream });
   return { pc, remoteStream };
 }
 
 export function cleanup() {
-  peers.forEach(({ pc }, userId) => {
-    pc.close();
-    cleanupPeer(userId);
+  console.log('Cleaning up all WebRTC connections');
+  peers.forEach(({ pc }, targetUserId) => {
+    cleanupPeer(targetUserId);
   });
+  
   if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
+    localStream.getTracks().forEach(track => {
+      track.stop();
+      console.log(`Stopped local ${track.kind} track`);
+    });
     localStream = null;
   }
 }
 
 function cleanupPeer(targetUserId) {
   if (peers.has(targetUserId)) {
+    console.log(`Cleaning up peer connection with ${targetUserId}`);
     const { pc, remoteStream } = peers.get(targetUserId);
-    pc.close();
-    remoteStream.getTracks().forEach(track => track.stop());
+    
+    if (pc) {
+      pc.ontrack = null;
+      pc.onicecandidate = null;
+      pc.oniceconnectionstatechange = null;
+      pc.onconnectionstatechange = null;
+      pc.close();
+    }
+    
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`Stopped remote ${track.kind} track from ${targetUserId}`);
+      });
+    }
+    
     peers.delete(targetUserId);
     
+    // Notify about stream removal
     proximityCallbacks.forEach(cb => cb({
       userId: targetUserId,
       hasStream: false
