@@ -6,6 +6,7 @@ import RoomForm from './components/RoomForm';
 import { initWebRTC, cleanup } from './services/webrtc';
 import { initSocketConnection, leaveRoom } from './services/socket';
 import './App.css';
+//import Chat from './components/Chat';
 
 function App() {
   const [room, setRoom] = useState(null);
@@ -88,6 +89,7 @@ function App() {
               <Game userId={userId} roomId={room} username={username} />
               
               <VideoChat userId={userId} participants={[userId]} /> 
+             
             </>
           ) : (
             <div className="loading">Loading assets...</div>

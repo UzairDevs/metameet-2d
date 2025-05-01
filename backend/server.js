@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -19,7 +18,6 @@ app.use(express.json());
 
 // Store active rooms and their participants
 const rooms = {};
-
 
 app.post('/api/room', (req, res) => {
   const roomId = uuidv4().substring(0, 6).toUpperCase();
@@ -67,19 +65,23 @@ io.on('connection', (socket) => {
     socket.emit('room-users', { participants: rooms[roomId].participants });
   });
 
+  socket.on('chat-message', ({ roomId, ...messageData }) => {
+    // Broadcast to all in room except sender
+    socket.to(roomId).emit('chat-message', messageData);
+    // Send back to sender for local update
+    socket.emit('chat-message', messageData);
+  });
   
   socket.on('position-update', (data) => {
     const { userId, roomId, position } = data;
     
     if (!rooms[roomId]?.participants[userId]) return;
 
- 
     rooms[roomId].participants[userId].position = position;
-    
     
     socket.to(roomId).emit('user-moved', { userId, position });
 
-    // Proximity detection (server-side example)
+    // Proximity detection
     const currentUser = rooms[roomId].participants[userId];
     Object.values(rooms[roomId].participants).forEach(otherUser => {
       if (otherUser.id === userId) return;
@@ -89,48 +91,63 @@ io.on('connection', (socket) => {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance < 150) { // Proximity threshold
+        // Emit to both users that they are in proximity
         socket.emit('proximity-alert', otherUser.id);
         io.to(otherUser.socketId).emit('proximity-alert', userId);
       }
     });
   });
 
-  // WebRTC 
-  socket.on('webrtc-offer', ({ to, offer }) => {
-    const targetSocket = findSocketById(to);
+  // WebRTC signaling
+  socket.on('webrtc-offer', (data) => {
+    const { to, offer } = data;
+    console.log(`Received offer from ${socket.userData?.userId} to ${to}`);
+    
+    // Find the target socket by user ID
+    const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
-      console.log(`Relaying offer from ${socket.userData.userId} to ${to}`);
+      console.log(`Forwarding offer to ${to}`);
       io.to(targetSocket.id).emit('webrtc-offer', {
         from: socket.userData.userId,
         offer: offer
       });
     } else {
-      console.log(`WebRTC offer target not found: ${to}`);
+      console.log(`User ${to} not found for offer`);
     }
   });
 
-  socket.on('webrtc-answer', ({ to, answer }) => {
-    const targetSocket = findSocketById(to);
+  socket.on('webrtc-answer', (data) => {
+    const { to, answer } = data;
+    console.log(`Received answer from ${socket.userData?.userId} to ${to}`);
+    
+    const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
-      console.log(`Relaying answer from ${socket.userData.userId} to ${to}`);
+      console.log(`Forwarding answer to ${to}`);
       io.to(targetSocket.id).emit('webrtc-answer', {
         from: socket.userData.userId,
         answer: answer
       });
+    } else {
+      console.log(`User ${to} not found for answer`);
     }
   });
 
-  socket.on('webrtc-ice-candidate', ({ to, candidate }) => {
-    const targetSocket = findSocketById(to);
+  socket.on('webrtc-ice-candidate', (data) => {
+    const { to, candidate } = data;
+    console.log(`Received ICE candidate from ${socket.userData?.userId} to ${to}`);
+    
+    const targetSocket = findSocketByUserId(to);
     if (targetSocket) {
+      console.log(`Forwarding ICE candidate to ${to}`);
       io.to(targetSocket.id).emit('webrtc-ice-candidate', {
         from: socket.userData.userId,
         candidate: candidate
       });
+    } else {
+      console.log(`User ${to} not found for ICE candidate`);
     }
   });
 
- 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     if (!socket.userData) return;
@@ -147,10 +164,14 @@ io.on('connection', (socket) => {
   });
 });
 
-
-function findSocketById(userId) {
-  return Array.from(io.sockets.sockets.values())
-    .find(socket => socket.userData?.userId === userId);
+// Helper function to find a socket by user ID
+function findSocketByUserId(userId) {
+  for (const [socketId, socket] of io.sockets.sockets.entries()) {
+    if (socket.userData?.userId === userId) {
+      return socket;
+    }
+  }
+  return null;
 }
 
 // Room cleanup

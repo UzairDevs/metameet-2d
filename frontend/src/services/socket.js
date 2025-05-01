@@ -67,3 +67,15 @@ export const updatePosition = (roomId, userId, position) => {
     position
   });
 };
+
+export const sendChatMessage = (roomId, messageData) => {
+  if (!socket) {
+    console.error('Socket not initialized');
+    return;
+  }
+  
+  socket.emit('chat-message', {
+    roomId,
+    ...messageData
+  });
+};
