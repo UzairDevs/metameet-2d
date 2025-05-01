@@ -73,6 +73,7 @@ const RoomForm = ({ onJoinRoom }) => {
   };
 
   return (
+    <div className="room-form-wrapper">
     <div className="room-form">
       <h2>2D Metaverse</h2>
       
@@ -112,6 +113,7 @@ const RoomForm = ({ onJoinRoom }) => {
           <button onClick={handleJoinRoom}>Join Room</button>
         </div>
       </div>
+    </div>
     </div>
   );
 };

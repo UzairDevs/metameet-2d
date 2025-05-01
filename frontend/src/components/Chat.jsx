@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { sendChatMessage } from '../services/socket';
+import { sendChatMessage, socket } from '../services/socket';
 
 const Chat = ({ roomId, userId, username }) => {
   const [messages, setMessages] = useState([]);
@@ -12,10 +12,10 @@ const Chat = ({ roomId, userId, username }) => {
       scrollToBottom();
     };
 
-    window.socket.on('chat-message', handleChatMessage);
+      socket.on('chat-message', handleChatMessage);
     
     return () => {
-      window.socket.off('chat-message', handleChatMessage);
+      socket.off('chat-message', handleChatMessage);
     };
   }, []);
 
@@ -63,6 +63,7 @@ const Chat = ({ roomId, userId, username }) => {
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
           placeholder="Type a message..."
         />
         <button type="submit">Send</button>

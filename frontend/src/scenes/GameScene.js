@@ -31,6 +31,7 @@ class GameScene extends Phaser.Scene {
     
     const background = this.add.image(0, 0, 'background').setOrigin(0, 0);
     
+     
     
     background.displayWidth = this.sys.game.config.width;
     background.displayHeight = this.sys.game.config.height;
@@ -54,7 +55,7 @@ class GameScene extends Phaser.Scene {
       startX, 
       startY - 40, 
       this.username, 
-      { fontSize: '18px', fill: '#fff' }
+      { fontSize: '25px', fill: '#000000' }
     );
     this.players[this.userId].nameText.setOrigin(0.5);
     
@@ -148,14 +149,14 @@ class GameScene extends Phaser.Scene {
     // Create sprite for other player
     this.players[userId] = this.add.sprite(position.x, position.y, 'player');
     this.players[userId].setScale(0.5); 
-    this.players[userId].setTint(0x00ff00); //TODO
+    this.players[userId].setTint(808080); //TODO
     
  
     this.players[userId].nameText = this.add.text(
       position.x, 
-      position.y - 40, 
+      position.y - 60, 
       username, 
-      { fontSize: '16px', fill: '#fff' }
+      { fontSize: '25px', fill: '#000000' }
     );
     this.players[userId].nameText.setOrigin(0.5);
     

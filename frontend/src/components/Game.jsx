@@ -16,14 +16,18 @@ const Game = ({ userId, roomId, username }) => {
     const config = {
       type: Phaser.AUTO,
       parent: gameRef.current,
-      width: 800,
-      height: 600,
+      width: gameRef.current?.offsetWidth || 1000,
+      height: gameRef.current?.offsetHeight || 700,
       physics: {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
           debug: false
         }
+      },
+      scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
       },
       scene: [GameScene]
     };

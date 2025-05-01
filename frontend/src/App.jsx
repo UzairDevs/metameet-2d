@@ -6,7 +6,7 @@ import RoomForm from './components/RoomForm';
 import { initWebRTC, cleanup } from './services/webrtc';
 import { initSocketConnection, leaveRoom } from './services/socket';
 import './App.css';
-//import Chat from './components/Chat';
+import Chat from './components/Chat';
 
 function App() {
   const [room, setRoom] = useState(null);
@@ -79,21 +79,30 @@ function App() {
         <RoomForm onJoinRoom={handleJoinRoom} />
       ) : (
         <div className="game-wrapper">
-          <header>
-            <h2>Room: {room}</h2>
-            <button onClick={handleLeaveRoom} className="leave-btn">Leave Room</button>
-          </header>
+        
+          <div className="game-section">
+            <header>
+              <h2 style={ {color: 'black'} }>Room: {room}</h2>
+              <button onClick={handleLeaveRoom} className="leave-btn">
+                Leave Room
+              </button>
+            </header>
+  
+            {isAssetsLoaded ? (
+              <>
+                <Game userId={userId} roomId={room} username={username} />
+               
+                <Chat userId={userId} roomId={room} username={username} />
+              </>
+            ) : (
+              <div className="loading">Loading assets...</div>
+            )}
+          </div>
+  
           
-          {isAssetsLoaded ? (
-            <>
-              <Game userId={userId} roomId={room} username={username} />
-              
-              <VideoChat userId={userId} participants={[userId]} /> 
-             
-            </>
-          ) : (
-            <div className="loading">Loading assets...</div>
-          )}
+          <div className="video-section">
+            <VideoChat userId={userId} participants={[userId]} />
+          </div>
         </div>
       )}
     </div>
