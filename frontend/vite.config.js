@@ -9,7 +9,12 @@ export default defineConfig({
       '/api': {
         target: import.meta.env.VITE_API_URL,
         changeOrigin: true,
-        secure: true
+        secure: false
+      },
+      '/socket.io': {
+        target: import.meta.env.VITE_API_URL,
+        ws: true,
+        changeOrigin: true
       }
     }
   },
