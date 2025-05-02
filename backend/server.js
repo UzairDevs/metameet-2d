@@ -3,6 +3,9 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const dotenv = require('dotenv');
+dotenv.config();
+
 
 const app = express();
 const server = http.createServer(app);
@@ -38,11 +41,9 @@ app.get('/api/room/:roomId', (req, res) => {
   res.json({ room: rooms[roomId] });
 });
 
-// Socket.io connections
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  // Handle user joining a room
   socket.on('join-room', ({ roomId, userId, username, position }) => {
     console.log(`User ${username} (${userId}) joining room ${roomId}`);
     
@@ -66,9 +67,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat-message', ({ roomId, ...messageData }) => {
-    // Broadcast to all in room except sender
+    
     socket.to(roomId).emit('chat-message', messageData);
-    // Send back to sender for local update
     socket.emit('chat-message', messageData);
   });
   
@@ -81,7 +81,7 @@ io.on('connection', (socket) => {
     
     socket.to(roomId).emit('user-moved', { userId, position });
 
-    // Proximity detection
+   
     const currentUser = rooms[roomId].participants[userId];
     Object.values(rooms[roomId].participants).forEach(otherUser => {
       if (otherUser.id === userId) return;
@@ -90,15 +90,15 @@ io.on('connection', (socket) => {
       const dy = otherUser.position.y - position.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
-      if (distance < 150) { // Proximity threshold
-        // Emit to both users that they are in proximity
+      if (distance < 150) { 
+      
         socket.emit('proximity-alert', otherUser.id);
         io.to(otherUser.socketId).emit('proximity-alert', userId);
       }
     });
   });
 
-  // WebRTC signaling
+  // WebRTC stuff
   socket.on('webrtc-offer', (data) => {
     const { to, offer } = data;
     console.log(`Received WebRTC offer from ${socket.userData?.userId} to ${to}`);
@@ -164,7 +164,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Helper function to find a socket by user ID
+
 function findSocketByUserId(userId) {
   for (const [socketId, socket] of io.sockets.sockets.entries()) {
     if (socket.userData?.userId === userId) {
@@ -174,10 +174,10 @@ function findSocketByUserId(userId) {
   return null;
 }
 
-// Room cleanup
+
 setInterval(() => {
   const now = Date.now();
-  const MAX_ROOM_AGE = 24 * 60 * 60 * 1000; // 24 hours
+  const MAX_ROOM_AGE = 24 * 60 * 60 * 1000; 
   
   for (const roomId in rooms) {
     if (now - rooms[roomId].createdAt > MAX_ROOM_AGE) {
@@ -185,7 +185,7 @@ setInterval(() => {
       delete rooms[roomId];
     }
   }
-}, 60 * 60 * 1000); // Check every hour
+}, 60 * 60 * 1000); // Checking every hour
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

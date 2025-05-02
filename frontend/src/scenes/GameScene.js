@@ -43,14 +43,14 @@ class GameScene extends Phaser.Scene {
     this.players[this.userId] = this.add.sprite(startX, startY, 'player');
     this.players[this.userId].setScale(0.5); // Adjust scale as needed
     
-    // Enable physics for the player
+    
     this.physics.add.existing(this.players[this.userId]);
     this.players[this.userId].body.setCollideWorldBounds(true);
     
-    // Set up camera to follow player
+    
     this.cameras.main.startFollow(this.players[this.userId]);
     
-    // Create player name text
+    
     this.players[this.userId].nameText = this.add.text(
       startX, 
       startY - 40, 
@@ -68,7 +68,7 @@ class GameScene extends Phaser.Scene {
     
     this.joinRoom(startX, startY);
     
-    // Set up position update interval
+   
     this.positionUpdateInterval = setInterval(() => {
       const player = this.players[this.userId];
       if (player && (this.lastPosition.x !== player.x || this.lastPosition.y !== player.y)) {
@@ -88,7 +88,7 @@ class GameScene extends Phaser.Scene {
   }
 
   setupSocketHandlers() {
-    // Handle new user joining
+    
     socket.on('user-joined', ({ userId, username, position }) => {
       console.log(`User joined: ${username} (${userId})`);
       this.addOtherPlayer(userId, username, position);
@@ -146,10 +146,10 @@ class GameScene extends Phaser.Scene {
     
     console.log(`Adding player: ${username} at position:`, position);
     
-    // Create sprite for other player
+   
     this.players[userId] = this.add.sprite(position.x, position.y, 'player');
     this.players[userId].setScale(0.5); 
-    this.players[userId].setTint(808080); //TODO
+    this.players[userId].setTint(808080); 
     
  
     this.players[userId].nameText = this.add.text(
@@ -178,10 +178,9 @@ class GameScene extends Phaser.Scene {
     
     if (!player || !this.cursors) return;
     
-    // Reset velocity
     player.body.setVelocity(0);
 
-    // Handle movement
+    
     if (this.cursors.left.isDown) {
       player.body.setVelocityX(-this.playerSpeed);
     } else if (this.cursors.right.isDown) {
@@ -194,7 +193,7 @@ class GameScene extends Phaser.Scene {
       player.body.setVelocityY(this.playerSpeed);
     }
     
-    // Update name text position
+    
     player.nameText.x = player.x;
     player.nameText.y = player.y - 40;
   }

@@ -74,46 +74,81 @@ const RoomForm = ({ onJoinRoom }) => {
 
   return (
     <div className="room-form-wrapper">
-    <div className="room-form">
-      <h2>2D Metaverse</h2>
       
-      {error && <div className="error">{error}</div>}
-      
-      <div className="form-group">
-        <label htmlFor="username">Username</label>
-        <input
-          type="text"
-          id="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
-          required
-        />
+      <div className="metaverse-portal">
+        <div className="holographic-grid"></div>
+        <div className="particle-network">
+          {[...Array(50)].map((_, i) => (
+            <div 
+              key={`particle-${i}`}
+              className="particle" 
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                color: i % 2 === 0 ? 'var(--accent-purple)' : 'var(--accent-cyan)',
+                animationDelay: `${Math.random() * 3}s`
+              }}
+            />
+          ))}
+        </div>
+        <div className="cube-container">
+          {[...Array(3)].map((_, i) => (
+            <div 
+              key={`cube-${i}`}
+              className="cube"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                color: i === 0 ? 'var(--accent-purple)' : 
+                       i === 1 ? 'var(--accent-cyan)' : 'var(--accent-green)'
+              }}
+            />
+          ))}
+        </div>
+       
       </div>
-      
-      <div className="form-actions">
-        <button 
-          onClick={handleCreateRoom} 
-          disabled={isCreating}
-        >
-          {isCreating ? 'Creating...' : 'Create New Room'}
-        </button>
+
+     
+      <div className="room-form">
+        <h2>2D Immersive Metaverse</h2>
         
-        <div className="divider">OR</div>
+        {error && <div className="error">{error}</div>}
         
         <div className="form-group">
-          <label htmlFor="roomId">Join Existing Room</label>
+          <label htmlFor="username">Username</label>
           <input
             type="text"
-            id="roomId"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            placeholder="Enter room code"
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+            required
           />
-          <button onClick={handleJoinRoom}>Join Room</button>
+        </div>
+        
+        <div className="form-actions">
+          <button 
+            onClick={handleCreateRoom} 
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating...' : 'Create New Room'}
+          </button>
+          
+          <div className="divider">OR</div>
+          
+          <div className="form-group">
+            <label htmlFor="roomId">Join Existing Room</label>
+            <input
+              type="text"
+              id="roomId"
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              placeholder="Enter room code"
+            />
+            <button onClick={handleJoinRoom}>Join Room</button>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };

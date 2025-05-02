@@ -18,14 +18,14 @@ function App() {
   useEffect(() => {
     const preloadAssets = async () => {
       try {
-        // Preload background image
+        
         const bgImage = new Image();
         bgImage.src = '/src/assets/images/background.png';
         await new Promise((resolve) => {
           bgImage.onload = resolve;
         });
         
-        // Preload player sprite
+       
         const playerImage = new Image();
         playerImage.src = '/src/assets/images/player.png';
         await new Promise((resolve) => {
@@ -35,17 +35,17 @@ function App() {
         setIsAssetsLoaded(true);
       } catch (error) {
         console.error('Failed to preload assets:', error);
-        // Continue anyway to not block the app
+       
         setIsAssetsLoaded(true);
       }
     };
     
     preloadAssets();
     
-    // Initialize socket connection
+    
     initSocketConnection();
     
-    // Clean up on component unmount
+    
     return () => {
       if (room) {
         leaveRoom(room, userId);
