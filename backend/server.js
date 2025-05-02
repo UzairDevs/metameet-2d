@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
-      'https://metameet-2d.vercel.app/', 
+      'https://metameet-2d-ee6urn1sg-uzaircodes0110-gmailcoms-projects.vercel.app/', 
       'http://44.210.207.239', 
       'http://44.210.207.239:3000' // EC2 with port
     ]
