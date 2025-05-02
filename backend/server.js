@@ -6,15 +6,21 @@ const { v4: uuidv4 } = require('uuid');
 const dotenv = require('dotenv');
 dotenv.config();
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.CLIENT_URL] 
-  : ['http://localhost:5173'];
+  ? [
+      'https://metameet-2d.vercel.app/', 
+      'http://44.210.207.239', 
+      'http://44.210.207.239:3000' // EC2 with port
+    ]
+  : ['http://localhost:5173']; // Local dev
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "allowedOrigins",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true,
+    transports: ['websocket', 'polling']
   }
 });
 
