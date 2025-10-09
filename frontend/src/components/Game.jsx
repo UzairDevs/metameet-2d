@@ -9,7 +9,7 @@ const Game = ({ userId, roomId, username }) => {
   const gameInstance = useRef(null);
 
   useEffect(() => {
-    
+    if (!userId || !roomId || !username) return;
     const socket = initSocketConnection();
     
     
