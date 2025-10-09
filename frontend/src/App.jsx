@@ -20,14 +20,14 @@ function App() {
       try {
         // Preload background image
         const bgImage = new Image();
-        bgImage.src = '/assets/images/background.png';
+        bgImage.src = 'assets/images/background.png';
         await new Promise((resolve) => {
           bgImage.onload = resolve;
         });
         
         // Preload player sprite
         const playerImage = new Image();
-        playerImage.src = '/assets/images/player.png';
+        playerImage.src = 'assets/images/player.png';
         await new Promise((resolve) => {
           playerImage.onload = resolve;
         });
