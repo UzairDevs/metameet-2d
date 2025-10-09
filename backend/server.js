@@ -33,7 +33,16 @@ app.post('/api/room', (req, res) => {
 app.get('/api/room/:roomId', (req, res) => {
   const { roomId } = req.params;
   if (!rooms[roomId]) {
-    return res.status(404).json({ error: 'Room not found' });
+    console.log(`Room ${roomId} not found in GET request, will be created on join`);
+    // Return success anyway - room will be created when someone joins
+    return res.json({ 
+      room: { 
+        id: roomId, 
+        participants: {},
+        createdAt: Date.now(),
+        autoCreated: true 
+      } 
+    });
   }
   res.json({ room: rooms[roomId] });
 });
