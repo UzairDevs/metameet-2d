@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   // Handle user joining a room
- socket.on("join-room", ({ roomId, userId, username, position }) => {
+  socket.on("join-room", ({ roomId, userId, username, position }) => {
   console.log(`🧍 ${username || "Unknown"} (${userId}) joining room ${roomId}`);
 
   if (!roomId || !userId) {
@@ -62,34 +62,37 @@ io.on('connection', (socket) => {
 
   // Create room if it doesn't exist
   if (!rooms[roomId]) {
-    rooms[roomId] = { participants: {}, createdAt: Date.now() };
+    rooms[roomId] = {
+      id: roomId,
+      participants: {},
+      createdAt: Date.now(),
+    };
+    console.log(`🆕 Created room ${roomId}`);
   }
 
-  // Ensure username fallback
-  const finalUsername = username || `User-${userId.substring(0, 4)}`;
-
-  // Save user info **keyed by userId**
+  // Save user info
   rooms[roomId].participants[userId] = {
-    username: finalUsername,
+    id: userId,
+    username: username || `User-${userId.substring(0, 4)}`,
     position: position || { x: 400, y: 300 },
     socketId: socket.id,
   };
 
-  // Save userData for WebRTC later
-  socket.userData = { userId, roomId, username: finalUsername };
+  socket.userData = { userId, roomId, username };
 
+  // Join socket.io room
   socket.join(roomId);
 
-  // 🔹 Send full list of participants to everyone in the room
+  // 🔹 Send the full list to everyone (so both clients see each other)
   io.to(roomId).emit("room-users", {
     participants: rooms[roomId].participants,
   });
 
-  // 🔹 Notify others that this user joined
+  // 🔹 Optionally still notify others who joined (for animations, sound, etc.)
   socket.to(roomId).emit("user-joined", {
     userId,
-    username: finalUsername,
-    position: position || { x: 400, y: 300 },
+    username,
+    position,
   });
 });
 
