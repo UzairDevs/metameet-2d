@@ -52,31 +52,50 @@ io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   // Handle user joining a room
-  socket.on('join-room', ({ roomId, userId, username, position }) => {
-    console.log(`User ${username} (${userId}) joining room ${roomId}`);
-    
-     if (!rooms[roomId]) {
-      console.log(`📝 Room ${roomId} not found, creating it automatically`);
-      rooms[roomId] = {
-        id: roomId,
-        participants: {},
-        createdAt: Date.now()
-      };
-    }
+  socket.on("join-room", ({ roomId, userId, username, position }) => {
+  console.log(`🧍 ${username || "Unknown"} (${userId}) joining room ${roomId}`);
 
-    socket.join(roomId);
-    rooms[roomId].participants[userId] = {
-      id: userId,
-      username,
-      position,
-      socketId: socket.id
+  if (!roomId || !userId) {
+    console.warn("❌ join-room missing roomId or userId:", { roomId, userId });
+    return;
+  }
+
+  // Create room if it doesn't exist
+  if (!rooms[roomId]) {
+    rooms[roomId] = {
+      id: roomId,
+      participants: {},
+      createdAt: Date.now(),
     };
+    console.log(`🆕 Created room ${roomId}`);
+  }
 
-    socket.userData = { userId, roomId, username };
+  // Save user info
+  rooms[roomId].participants[userId] = {
+    id: userId,
+    username: username || `User-${userId.substring(0, 4)}`,
+    position: position || { x: 400, y: 300 },
+    socketId: socket.id,
+  };
 
-    socket.to(roomId).emit('user-joined', { userId, username, position });
-    socket.emit('room-users', { participants: rooms[roomId].participants });
+  socket.userData = { userId, roomId, username };
+
+  // Join socket.io room
+  socket.join(roomId);
+
+  // 🔹 Send the full list to everyone (so both clients see each other)
+  io.to(roomId).emit("room-users", {
+    participants: rooms[roomId].participants,
   });
+
+  // 🔹 Optionally still notify others who joined (for animations, sound, etc.)
+  socket.to(roomId).emit("user-joined", {
+    userId,
+    username,
+    position,
+  });
+});
+
 
   socket.on('chat-message', ({ roomId, ...messageData }) => {
     // Broadcast to all in room except sender
