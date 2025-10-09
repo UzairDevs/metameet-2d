@@ -1,16 +1,20 @@
 import { io } from 'socket.io-client';
 
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+
+
 // Socket instance
 export let socket = null;
 
 export const initSocketConnection = () => {
   if (socket) return socket;
     
-  socket = io('http://localhost:3000', {
+  socket = io(SOCKET_URL, {
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
-    autoConnect: true
-  });
+    autoConnect: true,
+     transports: ['websocket', 'polling'],
+  });   
   
   socket.on('connect', () => {
     console.log('Connected to socket server with ID:', socket.id);

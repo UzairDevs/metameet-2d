@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const RoomForm = ({ onJoinRoom }) => {
   const [username, setUsername] = useState('');
   const [roomId, setRoomId] = useState('');
@@ -19,7 +19,7 @@ const RoomForm = ({ onJoinRoom }) => {
     setIsCreating(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/room', { //process.env.prod 
+      const response = await fetch(`${API_URL}/api/room`, { //process.env.prod 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -56,7 +56,7 @@ const RoomForm = ({ onJoinRoom }) => {
     }
     
     try {
-      const response = await fetch(`http://localhost:3000/api/room/${roomId.trim()}`, {
+      const response = await fetch(`${API_URL}/api/room/${roomId.trim()}`, {
         method: 'GET'
       });
       
