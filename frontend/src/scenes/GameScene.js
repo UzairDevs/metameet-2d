@@ -66,12 +66,7 @@ class GameScene extends Phaser.Scene {
     this.setupSocketHandlers();
     
     
-     // ✅ Only emit join-room if IDs exist
-  if (this.userId && this.roomId) {
     this.joinRoom(startX, startY);
-  } else {
-    console.error('Cannot join room, userId or roomId undefined', { userId: this.userId, roomId: this.roomId });
-  }
     
     // Set up position update interval
     this.positionUpdateInterval = setInterval(() => {
