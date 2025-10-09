@@ -55,9 +55,13 @@ io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, userId, username, position }) => {
     console.log(`User ${username} (${userId}) joining room ${roomId}`);
     
-    if (!rooms[roomId]) {
-      socket.emit('error', { message: 'Room not found' });
-      return;
+     if (!rooms[roomId]) {
+      console.log(`📝 Room ${roomId} not found, creating it automatically`);
+      rooms[roomId] = {
+        id: roomId,
+        participants: {},
+        createdAt: Date.now()
+      };
     }
 
     socket.join(roomId);
