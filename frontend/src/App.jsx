@@ -14,33 +14,34 @@ function App() {
   const [username, setUsername] = useState('');
   const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
   
-  // Preload assets when the component mounts
+  // Preload assets when the component mounts. This is only a warm-up — Phaser
+  // loads the same images itself in the scene — so it must NEVER block the UI.
   useEffect(() => {
+    // Resolves on load OR error, so a slow/failed image (e.g. CDN cold start)
+    // can't leave us stuck on the "Loading assets..." screen.
+    const loadImage = (src) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = resolve;
+        img.onerror = () => {
+          console.warn('Asset preload failed (continuing anyway):', src);
+          resolve();
+        };
+        img.src = src;
+      });
+
     const preloadAssets = async () => {
-      try {
-        // Preload background image
-        const bgImage = new Image();
-        bgImage.src = 'assets/images/background.png';
-        await new Promise((resolve) => {
-          bgImage.onload = resolve;
-        });
-        
-        // Preload player sprite
-        const playerImage = new Image();
-        playerImage.src = 'assets/images/player.png';
-        await new Promise((resolve) => {
-          playerImage.onload = resolve;
-        });
-        
-        setIsAssetsLoaded(true);
-      } catch (error) {
-        console.error('Failed to preload assets:', error);
-        // Continue anyway to not block the app
-        setIsAssetsLoaded(true);
-      }
+      await Promise.all([
+        loadImage('assets/images/background.png'),
+        loadImage('assets/images/player.png'),
+      ]);
+      setIsAssetsLoaded(true);
     };
-    
-    preloadAssets();
+
+    // Hard safety net: never gate the app on assets for more than 5s.
+    const fallback = setTimeout(() => setIsAssetsLoaded(true), 5000);
+
+    preloadAssets().finally(() => clearTimeout(fallback));
     
     // Initialize socket connection
     initSocketConnection();

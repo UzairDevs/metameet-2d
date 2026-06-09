@@ -9,10 +9,8 @@ const Game = ({ userId, roomId, username }) => {
   const gameInstance = useRef(null);
 
   useEffect(() => {
-    
-    const socket = initSocketConnection();
-    
-    
+    initSocketConnection();
+
     const config = {
       type: Phaser.AUTO,
       parent: gameRef.current,
@@ -29,31 +27,25 @@ const Game = ({ userId, roomId, username }) => {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH
       },
-      scene: [GameScene]
+      // Empty scene list: do NOT let Phaser auto-boot GameScene with no data.
+      // We add + start it explicitly below WITH the user/room data, so init()
+      // always has a valid userId on its first (and only) run.
+      scene: []
     };
-    
-    
-    if (!gameInstance.current) {
-      console.log('Creating new Phaser game');
-      gameInstance.current = new Phaser.Game(config);
-      
-      
-      gameInstance.current.events.once('ready', () => {
-        console.log('Game ready, starting scene');
-        gameInstance.current.scene.start('GameScene', { userId, roomId, username });
-      });
-    } else {
-      console.log('Game already exists, restarting scene');
-      gameInstance.current.scene.getScene('GameScene').scene.restart({ userId, roomId, username });
-    }
-    
+
+    console.log('Creating new Phaser game');
+    const game = new Phaser.Game(config);
+    gameInstance.current = game;
+
+    // add(key, sceneClass, autoStart=true, data) — starts the scene exactly
+    // once, with data, avoiding the data-less auto-start / restart race.
+    game.scene.add('GameScene', GameScene, true, { userId, roomId, username });
+
     // Clean up on unmount
     return () => {
       console.log('Cleaning up game component');
-      if (gameInstance.current) {
-        gameInstance.current.destroy(true);
-        gameInstance.current = null;
-      }
+      game.destroy(true);
+      gameInstance.current = null;
     };
   }, [userId, roomId, username]);
 
