@@ -1,6 +1,11 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+// Backend URL. In production set VITE_SOCKET_URL (or VITE_API_URL) to your
+// Render backend, e.g. https://metameet-backend.onrender.com
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3000';
 
 
 // Socket instance
@@ -8,24 +13,31 @@ export let socket = null;
 
 export const initSocketConnection = () => {
   if (socket) return socket;
-    
+
   socket = io(SOCKET_URL, {
-    reconnectionAttempts: 5,
+    reconnectionAttempts: 10,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
     autoConnect: true,
-     transports: ['websocket', 'polling'],
-  });   
-  
+    // Allow long-polling fallback first, then upgrade to websocket — more
+    // reliable through proxies and on free hosting cold starts.
+    transports: ['polling', 'websocket'],
+  });
+
   socket.on('connect', () => {
     console.log('Connected to socket server with ID:', socket.id);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error.message);
   });
 
   socket.on('error', (error) => {
     console.error('Socket error:', error);
   });
 
-  socket.on('disconnect', () => {
-    console.log('Disconnected from socket server');
+  socket.on('disconnect', (reason) => {
+    console.log('Disconnected from socket server:', reason);
   });
 
   return socket;

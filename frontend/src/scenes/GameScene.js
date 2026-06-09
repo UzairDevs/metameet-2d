@@ -88,6 +88,15 @@ class GameScene extends Phaser.Scene {
   }
 
   setupSocketHandlers() {
+    // Re-join the room whenever the socket (re)connects. On free hosting the
+    // server may restart/cold-start and lose in-memory room state, or the
+    // network may blip — this makes the player reappear to others.
+    this.onReconnect = () => {
+      const player = this.players[this.userId];
+      this.joinRoom(player ? player.x : this.lastPosition.x, player ? player.y : this.lastPosition.y);
+    };
+    socket.on('connect', this.onReconnect);
+
     // Handle new user joining
     socket.on('user-joined', ({ userId, username, position }) => {
       console.log(`User joined: ${username} (${userId})`);
@@ -148,8 +157,8 @@ class GameScene extends Phaser.Scene {
     
     // Create sprite for other player
     this.players[userId] = this.add.sprite(position.x, position.y, 'player');
-    this.players[userId].setScale(0.5); 
-    this.players[userId].setTint(808080); //TODO
+    this.players[userId].setScale(0.5);
+    this.players[userId].setTint(0x808080);
     
  
     this.players[userId].nameText = this.add.text(
@@ -202,8 +211,8 @@ class GameScene extends Phaser.Scene {
   shutdown() {
     
     clearInterval(this.positionUpdateInterval);
-    
-   
+
+    if (this.onReconnect) socket.off('connect', this.onReconnect);
     socket.off('user-joined');
     socket.off('room-users');
     socket.off('user-moved');

@@ -1,10 +1,30 @@
 import { socket, initSocketConnection } from './socket';
 
-const PEER_CONFIG = {
-  iceServers: [
+// ICE servers. Public Google STUN works for most same-/simple-NAT cases.
+// For users on mobile / strict (symmetric) NAT you need a TURN relay — set
+// VITE_TURN_URL (+ optional VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL) at
+// build time and it gets appended automatically. VITE_TURN_URL may be a
+// comma-separated list of turn:/turns: URLs.
+function buildIceServers() {
+  const iceServers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
-  ]
+  ];
+
+  const turnUrl = import.meta.env.VITE_TURN_URL;
+  if (turnUrl) {
+    iceServers.push({
+      urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
+      username: import.meta.env.VITE_TURN_USERNAME || undefined,
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || undefined
+    });
+  }
+
+  return iceServers;
+}
+
+const PEER_CONFIG = {
+  iceServers: buildIceServers()
 };
 
 const peers = new Map(); // Stores { pc: RTCPeerConnection, remoteStream: MediaStream }

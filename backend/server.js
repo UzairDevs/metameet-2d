@@ -6,18 +6,43 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
+
+// Allowed origins for CORS. Set CLIENT_ORIGIN on Render to your frontend URL
+// (comma-separated for multiple). Defaults to "*" for easy local/dev use.
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "*";
+const allowedOrigins =
+  CLIENT_ORIGIN === "*"
+    ? "*"
+    : CLIENT_ORIGIN.split(",").map((o) => o.trim());
+
 const io = socketIo(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
-app.use(cors());
+// Render terminates TLS at its proxy; trust it so secure cookies / IPs work.
+app.set('trust proxy', 1);
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Store active rooms and their participants
 const rooms = {};
+
+// --- Health & info routes (used by Render health checks / uptime pings) ---
+app.get('/', (req, res) => {
+  res.json({ service: 'metameet-2d backend', status: 'ok' });
+});
+
+app.get(['/health', '/healthz', '/api/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    rooms: Object.keys(rooms).length,
+    timestamp: Date.now()
+  });
+});
 
 app.post('/api/room', (req, res) => {
   const roomId = uuidv4().substring(0, 6).toUpperCase();
@@ -179,22 +204,33 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Explicit leave (e.g. user clicks "Leave Room")
+  socket.on('leave-room', ({ roomId, userId }) => {
+    removeParticipant(socket, roomId, userId);
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     if (!socket.userData) return;
 
     const { userId, roomId } = socket.userData;
-    if (rooms[roomId]?.participants[userId]) {
-      delete rooms[roomId].participants[userId];
-      socket.to(roomId).emit('user-left', { userId });
-      
-      if (Object.keys(rooms[roomId].participants).length === 0) {
-        console.log(`Room ${roomId} is empty, removing it`);
-        delete rooms[roomId];
-      }
-    }
+    removeParticipant(socket, roomId, userId);
   });
 });
+
+// Remove a participant from a room, notify others, and clean up empty rooms.
+function removeParticipant(socket, roomId, userId) {
+  if (!roomId || !userId || !rooms[roomId]?.participants[userId]) return;
+
+  delete rooms[roomId].participants[userId];
+  socket.to(roomId).emit('user-left', { userId });
+  socket.leave(roomId);
+
+  if (Object.keys(rooms[roomId].participants).length === 0) {
+    console.log(`Room ${roomId} is empty, removing it`);
+    delete rooms[roomId];
+  }
+}
 
 // Helper function to find a socket by user ID
 function findSocketByUserId(userId) {
